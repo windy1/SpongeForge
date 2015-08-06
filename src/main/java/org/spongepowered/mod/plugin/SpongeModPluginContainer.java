@@ -52,6 +52,10 @@ import org.slf4j.LoggerFactory;
 import org.spongepowered.api.event.Event;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameStateEvent;
+import org.spongepowered.api.service.error.ErrorReport;
+import org.spongepowered.api.service.error.Reportable;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.common.Sponge;
 import org.spongepowered.common.event.SpongeEventManager;
 import org.spongepowered.common.guice.SpongePluginGuiceModule;
 import org.spongepowered.common.plugin.SpongePluginContainer;
@@ -60,6 +64,7 @@ import org.spongepowered.mod.event.EventRegistry;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.cert.Certificate;
 import java.util.List;
@@ -127,7 +132,27 @@ public class SpongeModPluginContainer implements ModContainer, SpongePluginConta
                     m.invoke(getMod(), event);
                 }
             } catch (Throwable t) {
-                SpongeMod.instance.getLogger().error("[Plugin Class: " + this.pluginClassName + "][Handler: " + method.getName() + "]", t);
+                if (t instanceof InvocationTargetException) { // Unwrap exceptions a bit
+                    t = t.getCause();
+                }
+
+                this.fmlController.errorOccurred(this, t);
+                ErrorReport report = Sponge.getErrorReportService().createReport(t, Texts.of("While processing plugin state event"))
+                        .appendSection("Event Handler Information")
+                        .addEntry(Texts.of("Plugin Class"), Texts.of(this.pluginClassName))
+                        .addEntry(Texts.of("Handler method"), Texts.of(method.getName()))
+                        .parent();
+
+                try {
+                    if (getMod() instanceof Reportable) {
+                        report.addReportable((Reportable) getMod());
+                    }
+                } catch (Throwable t2) {
+                    report.appendSection("Plugin-specific information")
+                            .addEntry(Texts.of("An error occurred while trying to add plugin-specific information!"))
+                            .setException(t2);
+                }
+                report.dispatchFatal();
             }
         }
     }
