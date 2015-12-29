@@ -69,8 +69,10 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.common.SpongeImpl;
 import org.spongepowered.common.event.SpongeCommonEventFactory;
 import org.spongepowered.common.interfaces.server.management.IMixinPlayerInteractionManager;
+import org.spongepowered.common.interfaces.world.IMixinWorldServer;
 import org.spongepowered.common.registry.provider.DirectionFacingProvider;
 import org.spongepowered.common.util.TristateUtil;
+import org.spongepowered.common.world.FakePlayer;
 
 import java.util.Optional;
 
@@ -123,9 +125,22 @@ public abstract class MixinPlayerInteractionManager implements IMixinPlayerInter
             // Store reference of current player's itemstack in case it changes
             ItemStack oldStack = ItemStack.copyItemStack(stack);
 
+            Cause cause;
+            // Handle fake players
+            if (player instanceof FakePlayer) {
+                Optional<Object> simulated = ((IMixinWorldServer) player.worldObj).getCauseTracker().getCurrentContext()
+                        .firstNamed(NamedCause.PLAYER_SIMULATED, Object.class);
+                if (simulated.isPresent()) {
+                    cause = Cause.of(NamedCause.of(NamedCause.PLAYER_SIMULATED, simulated.get()));
+                } else {
+                    cause = Cause.of(NamedCause.of(NamedCause.PLAYER_SIMULATED, ((EntityPlayer) player).getGameProfile()));
+                }
+            } else {
+                cause = Cause.of(NamedCause.source(player));
+            }
 
             BlockSnapshot currentSnapshot = ((org.spongepowered.api.world.World) worldIn).createSnapshot(pos.getX(), pos.getY(), pos.getZ());
-            InteractBlockEvent.Secondary event = SpongeCommonEventFactory.callInteractBlockEventSecondary(Cause.of(NamedCause.source(player)),
+            InteractBlockEvent.Secondary event = SpongeCommonEventFactory.callInteractBlockEventSecondary(cause,
                     Optional.of(new Vector3d(hitX, hitY, hitZ)), currentSnapshot,
                     DirectionFacingProvider.getInstance().getKey(facing).get(), hand);
             if (!ItemStack.areItemStacksEqual(oldStack, this.thisPlayerMP.getHeldItem(hand))) {
@@ -247,7 +262,7 @@ public abstract class MixinPlayerInteractionManager implements IMixinPlayerInter
         return new PlayerInteractEvent.LeftClickBlock(player, pos, side, hitVec);
     }
 
-    // Forge treats their BreakEvent as a Pre event BEFORE the break actually occurs while Sponge 
+    // Forge treats their BreakEvent as a Pre event BEFORE the break actually occurs while Sponge
     // fires a break event AFTER it occurs in order to capture.
     // This causes mods to receive the BreakEvent AFTER HarvestDropsEvent which breaks mods such as
     // EnderIO's BlockPoweredSpawner.
@@ -255,7 +270,7 @@ public abstract class MixinPlayerInteractionManager implements IMixinPlayerInter
     // so plugins have a chance to alter the final result.
     @Redirect(method = "tryHarvestBlock", at = @At(value = "INVOKE", target = "Lnet/minecraftforge/common/ForgeHooks;onBlockBreakEvent(Lnet/minecraft/world/World;Lnet/minecraft/world/GameType;Lnet/minecraft/entity/player/EntityPlayerMP;Lnet/minecraft/util/math/BlockPos;)I", remap = false))
     public int onTryHarvestBlockBreakEvent(World worldIn, GameType gameType, EntityPlayerMP entityPlayer, BlockPos pos) {
-        int exp = net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(theWorld, gameType, thisPlayerMP, pos);
+        int exp = net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(this.theWorld, gameType, this.thisPlayerMP, pos);
         Location<org.spongepowered.api.world.World> location = new Location<>((org.spongepowered.api.world.World) worldIn, pos.getX(), pos.getY(), pos.getZ());
         ChangeBlockEvent.Pre event = SpongeEventFactory.createChangeBlockEventPre(Cause.of(NamedCause.source(entityPlayer)), ImmutableList.of(location),
                 (org.spongepowered.api.world.World) worldIn);

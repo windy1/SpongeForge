@@ -61,6 +61,7 @@
         "fml.common.registry.MixinVillagerRegistry",
         "forge.MixinBlockSnapshot",
         "forge.MixinDimensionManager",
+        "forge.MixinFakePlayer",
         "forge.MixinForgeHooks",
         "forge.MixinForgeInternalHandler",
         "forge.event.MixinForgeEventFactory",
