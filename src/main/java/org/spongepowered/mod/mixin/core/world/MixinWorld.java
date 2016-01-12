@@ -39,6 +39,7 @@ import org.spongepowered.common.interfaces.world.IMixinWorld;
 import org.spongepowered.common.interfaces.world.IMixinWorldType;
 import org.spongepowered.common.interfaces.world.gen.IPopulatorProvider;
 import org.spongepowered.common.world.gen.SpongeWorldGenerator;
+import org.spongepowered.common.world.gen.WorldGenConstants;
 import org.spongepowered.mod.world.gen.SpongeChunkProviderForge;
 
 @Mixin(value = net.minecraft.world.World.class, priority = 1001)
@@ -66,7 +67,14 @@ public abstract class MixinWorld implements org.spongepowered.api.world.World, I
         // If the base generator is an IChunkProvider which implements
         // IPopulatorProvider we request that it add its populators not covered
         // by the base generation populator
-        if (newGenerator.getBaseGenerationPopulator() instanceof IPopulatorProvider) {
+        if (newGenerator.getBaseGenerationPopulator() instanceof IChunkProvider) {
+            // We check here to ensure that the IPopulatorProvider is one of our mixed in ones and not
+            // from a mod chunk provider extending a provider that we mixed into
+            if (WorldGenConstants.isValid((IChunkProvider) newGenerator.getBaseGenerationPopulator(), IPopulatorProvider.class)) {
+                ((IPopulatorProvider) newGenerator.getBaseGenerationPopulator()).addPopulators(newGenerator);
+            }
+        } else if (newGenerator.getBaseGenerationPopulator() instanceof IPopulatorProvider) {
+            // If its not a chunk provider but is a populator provider then we call it as well
             ((IPopulatorProvider) newGenerator.getBaseGenerationPopulator()).addPopulators(newGenerator);
         }
 
@@ -80,6 +88,7 @@ public abstract class MixinWorld implements org.spongepowered.api.world.World, I
         SpongeChunkProviderForge spongegen = new SpongeChunkProviderForge((net.minecraft.world.World) (Object) this, newGenerator.getBaseGenerationPopulator(),
                 newGenerator.getBiomeGenerator());
         spongegen.setGenerationPopulators(newGenerator.getGenerationPopulators());
+        spongegen.setStructures(newGenerator.getStructures());
         spongegen.setPopulators(newGenerator.getPopulators());
         spongegen.setBiomeOverrides(newGenerator.getBiomeSettings());
         setSpongeGenerator(spongegen);

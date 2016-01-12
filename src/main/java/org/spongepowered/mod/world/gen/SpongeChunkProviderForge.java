@@ -81,6 +81,7 @@ import org.spongepowered.api.world.gen.populator.Reed;
 import org.spongepowered.api.world.gen.populator.SeaFloor;
 import org.spongepowered.api.world.gen.populator.Shrub;
 import org.spongepowered.api.world.gen.populator.WaterLily;
+import org.spongepowered.api.world.gen.structure.Structure;
 import org.spongepowered.common.SpongeImpl;
 import org.spongepowered.common.interfaces.world.IMixinWorld;
 import org.spongepowered.common.interfaces.world.biome.IBiomeGenBase;
@@ -148,6 +149,27 @@ public final class SpongeChunkProviderForge extends SpongeChunkProvider {
         MinecraftForge.EVENT_BUS.post(new DecorateBiomeEvent.Pre(this.world, this.rand, blockpos));
         MinecraftForge.ORE_GEN_BUS.post(new OreGenEvent.Pre(this.world, this.rand, blockpos));
         List<String> flags = Lists.newArrayList();
+        // We deliberately did not pass the structures to the event, cancelling
+        // these could be...bad
+        for (Structure structure : this.structures) {
+            StaticMixinHelper.runningGenerator = structure.getType();
+            if (structure instanceof IFlaggedPopulator) {
+                ((IFlaggedPopulator) structure).populate(chunkProvider, chunk, this.rand, flags);
+            } else {
+                structure.populate(chunk, this.rand);
+            }
+            StaticMixinHelper.runningGenerator = null;
+        }
+        // Run the biome structures as well
+        for (Structure structure : this.biomeSettings.get(biome).getStructures()) {
+            StaticMixinHelper.runningGenerator = structure.getType();
+            if (structure instanceof IFlaggedPopulator) {
+                ((IFlaggedPopulator) structure).populate(chunkProvider, chunk, this.rand, flags);
+            } else {
+                structure.populate(chunk, this.rand);
+            }
+            StaticMixinHelper.runningGenerator = null;
+        }
         for (Populator populator : populators) {
             if (!checkForgeEvent(populator, chunkProvider, chunkX, chunkZ, flags, chunk)) {
                 continue;
