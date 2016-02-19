@@ -62,6 +62,9 @@ public final class SpongeModGame extends SpongeGame {
 
     @Override
     public Client getClient() {
+        if (!isClientAvailable()) {
+            throw new IllegalStateException("The client is not available at this time!");
+        }
         return (Client) Minecraft.getMinecraft();
     }
 
