@@ -26,8 +26,10 @@ package org.spongepowered.mod;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.api.Client;
 import org.spongepowered.api.GameDictionary;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.event.EventManager;
@@ -51,6 +53,16 @@ public final class SpongeModGame extends SpongeGame {
             SpongeGameRegistry gameRegistry, ServiceManager serviceManager, TeleportHelper teleportHelper,
             ChannelRegistrar channelRegistrar, Logger logger) {
         super(platform, pluginManager, eventManager, gameRegistry, serviceManager, teleportHelper, channelRegistrar, logger);
+    }
+
+    @Override
+    public boolean isClientAvailable() {
+        return FMLCommonHandler.instance().getSide().isClient();
+    }
+
+    @Override
+    public Client getClient() {
+        return (Client) Minecraft.getMinecraft();
     }
 
     @Override

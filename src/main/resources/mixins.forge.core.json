@@ -104,6 +104,7 @@
         "client.gui.MixinGuiOverlayDebug",
         "client.network.MixinNetHandlerPlayClient",
         "client.server.MixinIntegratedServer",
+        "creativetab.MixinCreativeTabs",
         "server.MixinIntegratedServerAnonInner3"
     ],
     "server": [
