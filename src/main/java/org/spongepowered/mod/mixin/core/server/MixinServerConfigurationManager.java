@@ -25,16 +25,26 @@
 package org.spongepowered.mod.mixin.core.server;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.ServerConfigurationManager;
+import net.minecraft.world.Teleporter;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @NonnullByDefault
 @Mixin(ServerConfigurationManager.class)
 public abstract class MixinServerConfigurationManager {
+
+    @Shadow @Final private MinecraftServer mcServer;
 
     /**
      * @author Simon816
@@ -50,5 +60,18 @@ public abstract class MixinServerConfigurationManager {
             remap = false))
     public void onFirePlayerLoggedOutCall(FMLCommonHandler thisCtx, EntityPlayer playerIn) {
         // net.minecraftforge.fml.common.FMLCommonHandler.instance().firePlayerLoggedOut(playerIn);
+    }
+
+    @Inject(method = "transferPlayerToDimension(Lnet/minecraft/entity/player/EntityPlayerMP;ILnet/minecraft/world/Teleporter;)V", at = @At(value =
+            "HEAD"), cancellable = true, remap = false)
+    public void onTransferPlayerToDimension(EntityPlayerMP playerIn, int dimension, Teleporter teleporter, CallbackInfo ci) {
+
+        // If the dimension we are going to is same as the one we are in then that means we failed to initialize the to dimension return early here.
+        final WorldServer worldserver = this.mcServer.worldServerForDimension(playerIn.dimension);
+        final WorldServer worldserver1 = this.mcServer.worldServerForDimension(dimension);
+
+        if (worldserver.provider.getDimensionId() == worldserver1.provider.getDimensionId()) {
+            ci.cancel();
+        }
     }
 }
