@@ -29,14 +29,50 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import co.aikar.timings.TimingsManager;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.EntityEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.EntityMountEvent;
+import net.minecraftforge.event.entity.EntityStruckByLightningEvent;
+import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
+import net.minecraftforge.event.entity.item.ItemEvent;
+import net.minecraftforge.event.entity.item.ItemExpireEvent;
+import net.minecraftforge.event.entity.item.ItemTossEvent;
+import net.minecraftforge.event.entity.living.EnderTeleportEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
+import net.minecraftforge.event.entity.living.LivingHealEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingSpawnEvent;
+import net.minecraftforge.event.entity.living.ZombieEvent;
+import net.minecraftforge.event.entity.minecart.MinecartCollisionEvent;
+import net.minecraftforge.event.entity.minecart.MinecartEvent;
+import net.minecraftforge.event.entity.minecart.MinecartInteractEvent;
+import net.minecraftforge.event.entity.minecart.MinecartUpdateEvent;
+import net.minecraftforge.event.entity.player.ArrowLooseEvent;
+import net.minecraftforge.event.entity.player.ArrowNockEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.BonemealEvent;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
+import net.minecraftforge.event.entity.player.FillBucketEvent;
+import net.minecraftforge.event.entity.player.PlayerDestroyItemEvent;
+import net.minecraftforge.event.entity.player.PlayerDropsEvent;
+import net.minecraftforge.event.entity.player.PlayerFlyableFallEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerPickupXpEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
+import net.minecraftforge.event.entity.player.UseHoeEvent;
+import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.event.world.ChunkDataEvent;
 import net.minecraftforge.event.world.ChunkEvent;
+import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.ModContainer;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
@@ -46,20 +82,43 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.event.Cancellable;
 import org.spongepowered.api.event.Event;
 import org.spongepowered.api.event.Order;
+import org.spongepowered.api.event.action.InteractEvent;
+import org.spongepowered.api.event.action.LightningEvent;
 import org.spongepowered.api.event.action.SleepingEvent;
+import org.spongepowered.api.event.block.ChangeBlockEvent;
+import org.spongepowered.api.event.block.InteractBlockEvent;
+import org.spongepowered.api.event.block.NotifyNeighborBlockEvent;
+import org.spongepowered.api.event.command.SendCommandEvent;
+import org.spongepowered.api.event.entity.AffectEntityEvent;
+import org.spongepowered.api.event.entity.ChangeEntityExperienceEvent;
+import org.spongepowered.api.event.entity.CollideEntityEvent;
 import org.spongepowered.api.event.entity.ConstructEntityEvent;
+import org.spongepowered.api.event.entity.DestructEntityEvent;
+import org.spongepowered.api.event.entity.DismountEntityEvent;
+import org.spongepowered.api.event.entity.HarvestEntityEvent;
+import org.spongepowered.api.event.entity.HealEntityEvent;
 import org.spongepowered.api.event.entity.InteractEntityEvent;
+import org.spongepowered.api.event.entity.MountEntityEvent;
+import org.spongepowered.api.event.entity.MoveEntityEvent;
+import org.spongepowered.api.event.entity.SpawnEntityEvent;
 import org.spongepowered.api.event.entity.TargetEntityEvent;
+import org.spongepowered.api.event.item.inventory.ChangeInventoryEvent;
 import org.spongepowered.api.event.item.inventory.DropItemEvent;
+import org.spongepowered.api.event.item.inventory.InteractInventoryEvent;
 import org.spongepowered.api.event.item.inventory.UseItemStackEvent;
 import org.spongepowered.api.event.message.MessageChannelEvent;
+import org.spongepowered.api.event.message.MessageEvent;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
+import org.spongepowered.api.event.world.LoadWorldEvent;
 import org.spongepowered.api.event.world.SaveWorldEvent;
 import org.spongepowered.api.event.world.TargetWorldEvent;
+import org.spongepowered.api.event.world.UnloadWorldEvent;
 import org.spongepowered.api.event.world.chunk.LoadChunkEvent;
 import org.spongepowered.api.event.world.chunk.TargetChunkEvent;
 import org.spongepowered.api.event.world.chunk.UnloadChunkEvent;
 import org.spongepowered.api.plugin.PluginManager;
+import org.spongepowered.api.text.channel.MessageChannel;
+import org.spongepowered.api.world.explosion.Explosion;
 import org.spongepowered.common.SpongeImpl;
 import org.spongepowered.common.event.RegisteredListener;
 import org.spongepowered.common.event.SpongeCommonEventFactory;
@@ -70,7 +129,10 @@ import org.spongepowered.mod.interfaces.IMixinEvent;
 import org.spongepowered.mod.interfaces.IMixinEventBus;
 import org.spongepowered.mod.interfaces.IMixinLoadController;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -104,6 +166,76 @@ public class SpongeModEventManager extends SpongeEventManager {
                     .put(ClientConnectionEvent.Disconnect.class, PlayerEvent.PlayerLoggedOutEvent.class)
                     .put(SleepingEvent.Pre.class, PlayerSleepInBedEvent.class)
                     .build();
+
+    public final ImmutableMap<Class<? extends net.minecraftforge.fml.common.eventhandler.Event>, Set<Class<? extends Event>>> forgeToSpongeEventMapping =
+            new ImmutableMap.Builder<Class<? extends net.minecraftforge.fml.common.eventhandler.Event>, Set<Class<? extends Event>>>()
+                    .put(ItemEvent.class, ImmutableSet.of(AffectEntityEvent.class))
+                    .put(ItemExpireEvent.class, ImmutableSet.of(DestructEntityEvent.class))
+                    .put(ItemTossEvent.class, ImmutableSet.of(DropItemEvent.class))
+
+                    .put(EnderTeleportEvent.class, ImmutableSet.of(MoveEntityEvent.class))
+
+                    .put(LivingAttackEvent.class, ImmutableSet.of(org.spongepowered.api.event.entity.AttackEntityEvent.class))
+                    .put(LivingDeathEvent.class, ImmutableSet.of(DestructEntityEvent.class))
+                    .put(LivingDropsEvent.class, ImmutableSet.of(DropItemEvent.class))
+                    .put(LivingEntityUseItemEvent.class, ImmutableSet.of(UseItemStackEvent.class))
+                    .put(LivingEvent.class, ImmutableSet.of(AffectEntityEvent.class))
+                    .put(LivingEvent.LivingJumpEvent.class, ImmutableSet.of(MoveEntityEvent.class))
+                    .put(LivingExperienceDropEvent.class, ImmutableSet.of(HarvestEntityEvent.class))
+                    .put(LivingHealEvent.class, ImmutableSet.of(HealEntityEvent.class))
+                    .put(LivingHurtEvent.class, ImmutableSet.of(org.spongepowered.api.event.entity.AttackEntityEvent.class))
+                    .put(LivingSpawnEvent.class, ImmutableSet.of(SpawnEntityEvent.class))
+                    .put(ZombieEvent.class, ImmutableSet.of(SpawnEntityEvent.class))
+
+                    .put(MinecartCollisionEvent.class, ImmutableSet.of(CollideEntityEvent.class))
+                    .put(MinecartInteractEvent.class, ImmutableSet.of(InteractEntityEvent.class))
+
+                    .put(ArrowLooseEvent.class, ImmutableSet.of(SpawnEntityEvent.class))
+                    .put(ArrowNockEvent.class, ImmutableSet.of(UseItemStackEvent.class))
+                    .put(AttackEntityEvent.class, ImmutableSet.of(org.spongepowered.api.event.entity.AttackEntityEvent.class))
+                    .put(BonemealEvent.class, ImmutableSet.of(InteractBlockEvent.class, UseItemStackEvent.class))
+                    .put(EntityItemPickupEvent.class, ImmutableSet.of(ChangeInventoryEvent.class, DestructEntityEvent.class))
+                    .put(FillBucketEvent.class, ImmutableSet.of(InteractBlockEvent.class, UseItemStackEvent.class))
+                    .put(PlayerDestroyItemEvent.class, ImmutableSet.of(DestructEntityEvent.class, DropItemEvent.class))
+                    .put(PlayerDropsEvent.class, ImmutableSet.of(DropItemEvent.class, DestructEntityEvent.class))
+                    .put(net.minecraftforge.event.entity.player.PlayerEvent.HarvestCheck.class, ImmutableSet.of(ChangeBlockEvent.class))
+                    .put(PlayerFlyableFallEvent.class, ImmutableSet.of(MoveEntityEvent.class))
+                    .put(PlayerInteractEvent.class, ImmutableSet.of(InteractEvent.class))
+                    .put(PlayerPickupXpEvent.class, ImmutableSet.of(ChangeEntityExperienceEvent.class, DestructEntityEvent.class))
+                    .put(UseHoeEvent.class, ImmutableSet.of(InteractBlockEvent.class, UseItemStackEvent.class))
+
+                    .put(EntityEvent.EntityConstructing.class, ImmutableSet.of(SpawnEntityEvent.class))
+                    .put(EntityEvent.EnteringChunk.class, ImmutableSet.of(MoveEntityEvent.class))
+                    .put(EntityJoinWorldEvent.class, ImmutableSet.of(SpawnEntityEvent.class))
+                    .put(EntityMountEvent.class, ImmutableSet.of(MountEntityEvent.class, DismountEntityEvent.class))
+                    .put(EntityStruckByLightningEvent.class, ImmutableSet.of(LightningEvent.class))
+                    .put(EntityTravelToDimensionEvent.class, ImmutableSet.of(MoveEntityEvent.class))
+
+
+                    .put(BlockEvent.HarvestDropsEvent.class, ImmutableSet.of(SpawnEntityEvent.class, DropItemEvent.class, ChangeBlockEvent.class))
+                    .put(BlockEvent.BreakEvent.class, ImmutableSet.of(ChangeBlockEvent.Break.class, ChangeBlockEvent.Post.class))
+                    .put(BlockEvent.PlaceEvent.class, ImmutableSet.of(ChangeBlockEvent.Place.class, ChangeBlockEvent.Modify.class, ChangeBlockEvent.Post.class))
+                    .put(BlockEvent.MultiPlaceEvent.class, ImmutableSet.of(ChangeBlockEvent.Place.class))
+                    .put(BlockEvent.NeighborNotifyEvent.class, ImmutableSet.of(NotifyNeighborBlockEvent.class))
+
+                    .put(ChunkDataEvent.Load.class, ImmutableSet.of(LoadChunkEvent.class))
+                    .put(ChunkEvent.Load.class, ImmutableSet.of(LoadChunkEvent.class))
+
+                    .put(ExplosionEvent.class, ImmutableSet.of(org.spongepowered.api.event.world.ExplosionEvent.class))
+                    .put(WorldEvent.Load.class, ImmutableSet.of(LoadWorldEvent.class))
+                    .put(WorldEvent.Unload.class, ImmutableSet.of(UnloadWorldEvent.class))
+
+                    .put(CommandEvent.class, ImmutableSet.of(SendCommandEvent.class))
+
+                    .put(ServerChatEvent.class, ImmutableSet.of(MessageChannelEvent.Chat.class))
+
+                    .put(PlayerEvent.ItemPickupEvent.class, ImmutableSet.of(DestructEntityEvent.class, ChangeInventoryEvent.Pickup.class))
+                    .put(PlayerEvent.PlayerLoggedInEvent.class, ImmutableSet.of(ClientConnectionEvent.class))
+                    .put(PlayerEvent.PlayerLoggedOutEvent.class, ImmutableSet.of(ClientConnectionEvent.class))
+                    .put(PlayerEvent.PlayerChangedDimensionEvent.class, ImmutableSet.of(MoveEntityEvent.class))
+
+                    .build();
+
 
 
     @Inject
