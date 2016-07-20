@@ -36,6 +36,8 @@ minecraft {
 // Apply shared implementation Gradle config
 apply from: project(':SpongeCommon').file('gradle/implementation.gradle')
 
+ext.ats += 'spongeforge_at.cfg'
+
 version = "$minecraft.version-$forgeBuild-$apiSuffix-$buildNumber"
 
 compileJava {

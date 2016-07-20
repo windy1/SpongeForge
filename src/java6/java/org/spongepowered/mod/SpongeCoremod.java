@@ -27,6 +27,7 @@ package org.spongepowered.mod;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.common.ForgeVersion;
 import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.relauncher.CoreModManager;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -154,6 +155,7 @@ public class SpongeCoremod implements IFMLLoadingPlugin {
 
     @Override
     public String getAccessTransformerClass() {
+        CoreModManager.getAccessTransformers().add("org.spongepowered.mod.asm.transformer.SpongeForgeAccessTransformer");
         return "org.spongepowered.mod.asm.transformer.SpongeAccessTransformer";
     }
 
