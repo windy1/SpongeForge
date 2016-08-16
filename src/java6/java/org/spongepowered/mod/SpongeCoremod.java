@@ -113,7 +113,10 @@ public class SpongeCoremod implements IFMLLoadingPlugin {
         Launch.classLoader.addTransformerExclusion("org.apache.commons.lang3.");
         Launch.classLoader.addTransformerExclusion("org.spongepowered.mod.interfaces.IMixinEvent");
 
-        SpongeLaunch.setupSuperClassTransformer();
+        // Transformers specified in getASMTransformerClass are wrapped by FML, which prevents Mixin from detecting the @Resource annotation
+        Launch.classLoader.registerTransformer(SpongeLaunch.METHOD_WARNING_TRANSFORMER);
+
+        SpongeLaunch.setupTransformers();
     }
 
     private boolean isProductionEnvironment() {
@@ -136,7 +139,7 @@ public class SpongeCoremod implements IFMLLoadingPlugin {
     @Override
     public String[] getASMTransformerClass() {
         return new String[] {
-                SpongeLaunch.SUPERCLASS_TRANSFORMER
+                SpongeLaunch.SUPERCLASS_TRANSFORMER,
         };
     }
 
