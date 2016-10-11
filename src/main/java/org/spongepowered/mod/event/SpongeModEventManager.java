@@ -371,11 +371,16 @@ public class SpongeModEventManager extends SpongeEventManager {
 
     @Override
     public boolean post(Event spongeEvent, boolean allowClientThread) {
+        return this.post(spongeEvent, allowClientThread, true);
+    }
+
+    @Override
+    public boolean post(Event spongeEvent, boolean allowClientThread, boolean fireModEvents) {
         if (!allowClientThread & Sponge.getGame().getPlatform().getExecutionType().isClient()) {
             return false;
         }
 
-        if (spongeEvent.getClass().getInterfaces().length > 0) {
+        if (fireModEvents && spongeEvent.getClass().getInterfaces().length > 0) {
             Class<? extends net.minecraftforge.fml.common.eventhandler.Event> clazz =
                     this.eventMappings.get(spongeEvent.getClass().getInterfaces()[0]);
             if (clazz == null) {

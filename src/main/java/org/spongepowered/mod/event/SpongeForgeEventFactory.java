@@ -346,6 +346,9 @@ public class SpongeForgeEventFactory {
         if (NotifyNeighborBlockEvent.class.isAssignableFrom(clazz)) {
             return BlockEvent.NeighborNotifyEvent.class;
         }
+        if (ChangeBlockEvent.Pre.class.isAssignableFrom(clazz)) {
+            return BlockEvent.BreakEvent.class;
+        }
         if (ChangeBlockEvent.Break.class.isAssignableFrom(clazz)) {
             return BlockEvent.BreakEvent.class;
         }
@@ -407,6 +410,8 @@ public class SpongeForgeEventFactory {
             return callEntityItemPickupEvent(spongeEvent);
         } else if (PlayerInteractEvent.EntityInteract.class.isAssignableFrom(clazz)) {
             return callEntityInteractEvent(spongeEvent);
+        } else if (ChangeBlockEvent.Pre.class.isAssignableFrom(spongeEvent.getClass()) ){
+            return callChangeBlockPreEvent(spongeEvent);
         } else if (BlockEvent.NeighborNotifyEvent.class.isAssignableFrom(clazz)) {
             return callNeighborNotifyEvent(spongeEvent);
         } else if (BlockEvent.BreakEvent.class.isAssignableFrom(clazz)) {
@@ -1235,6 +1240,31 @@ public class SpongeForgeEventFactory {
             spongeEvent.setCancelled(true);
         }
 
+        return spongeEvent;
+    }
+
+    private static ChangeBlockEvent.Pre callChangeBlockPreEvent(Event event) {
+        ChangeBlockEvent.Pre spongeEvent = (ChangeBlockEvent.Pre) event;
+
+        Optional<Player> player = spongeEvent.getCause().first(Player.class);
+        if (!player.isPresent()) {
+            return null;
+        }
+        final EntityPlayerMP entityPlayer = EntityUtil.toNative(player.get());
+
+        if (spongeEvent.getLocations().size() != 1) {
+            throw new IllegalStateException(String.format("Cannot fire BlockEvent.BreakBlock events for ChangeBlockEvent.Pre with %s locations!", spongeEvent.getLocations().size()));
+        }
+
+        Location<World> loc = spongeEvent.getLocations().get(0);
+
+        BlockEvent.BreakEvent forgeEvent = new BlockEvent.BreakEvent(entityPlayer.worldObj, VecHelper.toBlockPos(loc), (IBlockState) loc.getBlock(), entityPlayer);
+        forgeEvent.setCanceled(spongeEvent.isCancelled());
+        ((IMixinEventBus) MinecraftForge.EVENT_BUS).post(forgeEvent, true);
+        if (forgeEvent.isCanceled()) {
+            spongeEvent.setCancelled(true);
+        }
+        StaticMixinForgeHelper.expFromChangeBlockPre = forgeEvent.getExpToDrop();
         return spongeEvent;
     }
 

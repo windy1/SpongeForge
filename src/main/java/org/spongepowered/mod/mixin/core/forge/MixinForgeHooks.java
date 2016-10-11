@@ -29,11 +29,19 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.SPacketBlockChange;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.GameType;
 import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeHooks;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.common.event.tracking.CauseTracker;
 import org.spongepowered.common.event.tracking.IPhaseState;
 import org.spongepowered.common.event.tracking.PhaseData;
@@ -88,5 +96,30 @@ public class MixinForgeHooks {
         }
 
         return toolLevel >= block.getHarvestLevel(state);
+    }
+
+    @Inject(method = "onBlockBreakEvent", at = @At(value = "NEW", args = "class=net/minecraftforge/event/world/BlockEvent$BreakEvent", remap = false), cancellable = true)
+    private static void onCreateBreakEvent(World world, GameType gameType, EntityPlayerMP entityPlayer, BlockPos pos, CallbackInfoReturnable<Integer> cir) {
+        // Copied from original method
+
+        // Sponge start - use 'handlePlayerBreakBlockPreEvent' to determine if event is cancelled
+        boolean cancelled = StaticMixinForgeHelper.handlePlayerBreakBlockPreEvent(entityPlayer, pos);
+        if (cancelled)
+        {
+            // Let the client know the block still exists
+            entityPlayer.connection.sendPacket(new SPacketBlockChange(world, pos));
+
+            // Update any tile entity data for this block
+            TileEntity tileentity = world.getTileEntity(pos);
+            if (tileentity != null)
+            {
+                Packet<?> pkt = tileentity.getUpdatePacket();
+                if (pkt != null)
+                {
+                    entityPlayer.connection.sendPacket(pkt);
+                }
+            }
+        }
+        cir.setReturnValue(cancelled ? -1 : StaticMixinForgeHelper.expFromChangeBlockPre);
     }
 }

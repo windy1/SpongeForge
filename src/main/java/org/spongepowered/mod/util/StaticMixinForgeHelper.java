@@ -28,9 +28,12 @@ import com.google.common.collect.Lists;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.ISpecialArmor;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
@@ -41,6 +44,7 @@ import org.spongepowered.api.event.cause.entity.damage.DamageModifierTypes;
 import org.spongepowered.api.event.entity.DamageEntityEvent;
 import org.spongepowered.api.item.inventory.equipment.EquipmentType;
 import org.spongepowered.api.util.Tuple;
+import org.spongepowered.common.event.SpongeCommonEventFactory;
 import org.spongepowered.common.event.damage.DamageEventHandler;
 
 import java.util.ArrayList;
@@ -58,6 +62,10 @@ public final class StaticMixinForgeHelper {
 
     // Whether to prevent ForgeInternalHandler#onEntityJoinWorld from handling custom Item entities (due to Sponge already handling it)
     public static boolean preventInternalForgeEntityListener = false;
+
+    // This is ugly, but it's the best way to get the experience from the BlockEvent.BreakEvent caused by a ChangeBlockEvent.Pre,
+    // without significantly refactoring SpongeModEventFactory and/or duplicating a lot of code
+    public static int expFromChangeBlockPre = -1;
 
     public static DamageSource exchangeDamageSource(DamageSource damageSource) {
 
@@ -271,6 +279,10 @@ public final class StaticMixinForgeHelper {
         }
 
         return modId;
+    }
+
+    public static boolean handlePlayerBreakBlockPreEvent(EntityPlayerMP entityPlayer, BlockPos pos) {
+        return SpongeCommonEventFactory.firePreEventForPos((WorldServer) entityPlayer.worldObj, entityPlayer, pos, true);
     }
 
 }
